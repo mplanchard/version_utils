@@ -6,11 +6,12 @@ management systems.
 # Standard library imports
 from __future__ import (absolute_import, division,
                         print_function, unicode_literals)
+import abc
 from logging import getLogger
 
 # Local imports
 
-logger = getLogger(__name__)
+LOG = getLogger(__name__)
 
 
 class Package(object):
@@ -48,10 +49,85 @@ class Package(object):
 
     def __str__(self):
         """Create a string representation of a Package object"""
-        return ('Package Object: {0}'.format(self.info))
+        return 'Package Object: {0}'.format(self.info)
 
     def __repr__(self):
         """Full representation of a Package object"""
         return ('Package("{0}", "{1}", "{2}", "{3}", "{4}", '
                 '"{5}")'.format(self.name, self.epoch, self.version,
                                 self.release, self.arch, self.package))
+
+
+class Epoch(object):
+    """An object to provide epoch parsing and defaults
+
+    :param int epoch_default: the default value for epoch if none is
+        provided
+    """
+
+    def __init__(self, epoch, epoch_default=0):
+        self.epoch_default = epoch_default
+        self.epoch = self.parse(epoch)
+
+    def parse(self, epoch):
+        """Parse an epoch based on ``default_epoch``"""
+        if epoch is None or epoch == '':
+            return self.epoch_default
+        return int(epoch)
+
+    def to_string(self):
+        """Return the epoch as a string
+
+        Provided as a means of explicitly accessing implicit string
+        conversion of the Epoch class
+        """
+        return self.__str__()
+
+    def __str__(self):
+        """The epoch as a string
+
+        The epoch string should be just the epoch integer converted
+        to a string, suitable for inclusion in version strings.
+
+        :rtype: str
+        """
+        return str(self.epoch)
+
+    def __repr__(self):
+        """Full representation of an Epoch"""
+        return (
+            'Epoch(%s, epoch_default=%s)' % (self.epoch, self.epoch_default)
+        )
+
+
+class Version(object):
+    """A base class for classes providing version parsing & defaults"""
+
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, version):
+        """Instantiate a Version object
+
+        :param str version: the version string to parse
+        """
+        pass
+
+    @abc.abstractmethod
+    def parse(self):
+        """Parse the version string"""
+
+    @abc.abstractmethod
+    def __str__(self):
+        """Return a string representation of the Version
+
+        The string representation should be suitable for inclusion in
+        an official Debian version string
+        """
+
+    @abc.abstractmethod
+    def __repr__(self):
+        """Return a fully-qualified representation of the Version
+
+        The response from ``__repr__`` should be able to be evaluated
+        directly with ``eval()`` and return an identical object
+        """

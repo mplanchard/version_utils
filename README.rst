@@ -143,6 +143,24 @@ their contributions to and assistance with this project:
 Changelog
 ---------
 
+1.0.0
++++++
+
+Support for Debian packages and version strings (finally!)
+
+Deprecated the ``arch_provided`` kwarg for ``rpm.compare_packages`` in favor
+of ``arch_included`` in order to standardize the kwarg name across functions.
+This has been done in a backwards-compatible fashion:
+
+* ``arch_included`` defaults to ``True`` to match previous behavior of
+``arch_provided``, and is used in function logic in place of ``arch_provided``
+* ``arch_provided`` now defaults to ``None``
+* If ``arch_provided`` is not ``None`` (i.e. it has been explicitly set), it
+overrides the value of ``arch_included``, while issuing a deprecation warning
+
+Better PEP 008 compliance throughout
+
+
 0.3.1
 +++++
 

@@ -11,7 +11,7 @@ The version_utils package currently contains the following modules:
 from __future__ import absolute_import, division, print_function
 import logging
 
-from version_utils import common, errors, rpm
+from version_utils import common, deb, errors, rpm
 from version_utils.version import __version__, __version_info__
 
 try:  # Python 2.7+
