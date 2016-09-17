@@ -11,7 +11,16 @@ from logging import getLogger
 
 # Local imports
 
-LOG = getLogger(__name__)
+log = getLogger(__name__)
+
+
+# Return values:
+#   a_newer: a is newer than b, return 1
+#   b_newer: b is newer than a, return -1
+#   a_eq_b: a and b are equal, return 0
+A_NEWER = 1
+B_NEWER = -1
+A_EQ_B = 0
 
 
 class Package(object):
@@ -61,27 +70,21 @@ class Package(object):
 class Epoch(object):
     """An object to provide epoch parsing and defaults
 
-    :param int epoch_default: the default value for epoch if none is
-        provided
+    :param str epoch: the epoch with which to construct the class
     """
 
-    def __init__(self, epoch, epoch_default=0):
-        self.epoch_default = epoch_default
-        self.epoch = self.parse(epoch)
+    def __init__(self, epoch):
+        self.epoch = str(epoch)
 
-    def parse(self, epoch):
-        """Parse an epoch based on ``default_epoch``"""
-        if epoch is None or epoch == '':
-            return self.epoch_default
-        return int(epoch)
-
-    def to_string(self):
-        """Return the epoch as a string
-
-        Provided as a means of explicitly accessing implicit string
-        conversion of the Epoch class
-        """
-        return self.__str__()
+    def __cmp__(self, other):
+        a = int(self.epoch)
+        b = int(other.epoch)
+        if a == b:
+            return A_EQ_B
+        elif a > b:
+            return A_NEWER
+        else:
+            return B_NEWER
 
     def __str__(self):
         """The epoch as a string
@@ -91,37 +94,49 @@ class Epoch(object):
 
         :rtype: str
         """
-        return str(self.epoch)
+        return self.epoch
 
     def __repr__(self):
         """Full representation of an Epoch"""
-        return (
-            'Epoch(%s, epoch_default=%s)' % (self.epoch, self.epoch_default)
-        )
+        return 'Epoch(%s)' % self.epoch
 
 
 class Version(object):
-    """A base class for classes providing version parsing & defaults"""
+    """A base class for version classes"""
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, version):
+    def __init__(self, version_str):
         """Instantiate a Version object
 
-        :param str version: the version string to parse
+        :param str version_str: the version string to parse
         """
-        pass
+        self.version_string = version_str
+        self.epoch, self.version, self.revision = self.parse(version_str)
 
     @abc.abstractmethod
     def parse(self):
-        """Parse the version string"""
+        """Parse the version string and return epoch, version, release
+
+        :returns: a 3-tuple of strings of the form ``(epoch, version,
+        release)``
+        :rtype: tuple
+        """
+
+    @abc.abstractmethod
+    def __cmp__(self, other):
+        """Compare two version objects
+
+        Return -1 if ``self < other``, 0 if ``self == other``, and 1 if
+        ``self > other``
+        """
 
     @abc.abstractmethod
     def __str__(self):
         """Return a string representation of the Version
 
         The string representation should be suitable for inclusion in
-        an official Debian version string
+        an official version string
         """
 
     @abc.abstractmethod

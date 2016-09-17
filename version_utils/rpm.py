@@ -21,22 +21,14 @@ from re import compile
 from warnings import warn
 
 # version_utils imports
-from version_utils.common import Package
-from version_utils.errors import RpmError
+from . import _parse as parse
+from .common import A_EQ_B, A_NEWER, B_NEWER, Package
+from .errors import RpmError
 
 
 _RPM_RE = compile('(\S+)-(?:(\d*):)?(.*)-(~?\w+[\w.]*)')
 
-LOG = getLogger(__name__)
-
-
-# Return values:
-#   a_newer: a is newer than b, return 1
-#   b_newer: b is newer than a, return -1
-#   a_eq_b: a and b are equal, return 0
-A_NEWER = 1
-B_NEWER = -1
-A_EQ_B = 0
+log = getLogger(__name__)
 
 
 def compare_packages(rpm_str_a, rpm_str_b, arch_provided=None,
@@ -68,7 +60,7 @@ def compare_packages(rpm_str_a, rpm_str_b, arch_provided=None,
              'will be removed in a future release. Please use '
              '"arch_included" instead')
         arch_included = arch_provided
-    LOG.debug('resolve_versions(%s, %s)', rpm_str_a, rpm_str_b)
+    log.debug('resolve_versions(%s, %s)', rpm_str_a, rpm_str_b)
     evr_a = parse_package(rpm_str_a, arch_included)['EVR']
     evr_b = parse_package(rpm_str_b, arch_included)['EVR']
     return labelCompare(evr_a, evr_b)
@@ -164,7 +156,7 @@ def compare_versions(version_a, version_b):
     :raises RpmError: if an a type is passed that cannot be converted to
         a list
     """
-    LOG.debug('compare_versions(%s, %s)', version_a, version_b)
+    log.debug('compare_versions(%s, %s)', version_a, version_b)
     if version_a == version_b:
         return A_EQ_B
     try:
@@ -173,8 +165,7 @@ def compare_versions(version_a, version_b):
         raise RpmError('Could not compare {0} to '
                        '{1}'.format(version_a, version_b))
     while len(chars_a) != 0 and len(chars_b) != 0:
-        LOG.debug('starting loop comparing %s '
-                     'to %s', chars_a, chars_b)
+        log.debug('starting loop comparing %s to %s', chars_a, chars_b)
         _check_leading(chars_a, chars_b)
         if chars_a[0] == '~' and chars_b[0] == '~':
             map(lambda x: x.pop(0), (chars_a, chars_b))
@@ -188,10 +179,10 @@ def compare_versions(version_a, version_b):
         if block_res != A_EQ_B:
             return block_res
     if len(chars_a) == len(chars_b):
-        LOG.debug('versions are equal')
+        log.debug('versions are equal')
         return A_EQ_B
     else:
-        LOG.debug('versions not equal')
+        log.debug('versions not equal')
         return A_NEWER if len(chars_a) > len(chars_b) else B_NEWER
 
 
@@ -211,11 +202,12 @@ def package(package_string, arch_included=True):
         information
     :rtype: common.Package
     """
-    LOG.debug('package(%s, %s)', package_string, arch_included)
+    log.debug('package(%s, %s)', package_string, arch_included)
     pkg_info = parse_package(package_string, arch_included)
-    pkg = Package(pkg_info['name'], pkg_info['EVR'][0], pkg_info['EVR'][1],
-                  pkg_info['EVR'][2], pkg_info['arch'],
-                  package_str=package_string)
+    pkg = Package(
+        pkg_info['name'], pkg_info['EVR'][0], pkg_info['EVR'][1],
+        pkg_info['EVR'][2], pkg_info['arch'], package_str=package_string
+    )
     return pkg
 
 
@@ -239,14 +231,14 @@ def parse_package(package_string, arch_included=True):
     :rtype: dict
     """
     # Yum sets epoch values to 0 if they are not specified
-    LOG.debug('parse_package(%s, %s)', package_string, arch_included)
+    log.debug('parse_package(%s, %s)', package_string, arch_included)
     default_epoch = '0'
     arch = None
     if arch_included:
         char_list = list(package_string)
         arch = _pop_arch(char_list)
         package_string = ''.join(char_list)
-        LOG.debug('updated version_string: %s', package_string)
+        log.debug('updated version_string: %s', package_string)
     try:
         name, epoch, version, release = _RPM_RE.match(package_string).groups()
     except AttributeError:
@@ -258,7 +250,7 @@ def parse_package(package_string, arch_included=True):
         'EVR': (epoch, version, release),
         'arch': arch
     }
-    LOG.debug('parsed information: %s', info)
+    log.debug('parsed information: %s', info)
     return info
 
 
@@ -272,7 +264,7 @@ def _pop_arch(char_list):
     :return: the parsed architecture as a string
     :rtype: str
     """
-    LOG.debug('_pop_arch(%s)', char_list)
+    log.debug('_pop_arch(%s)', char_list)
     arch_list = []
     char = char_list.pop()
     while char != '.':
@@ -282,7 +274,7 @@ def _pop_arch(char_list):
         except IndexError:  # Raised for a string with no periods
             raise RpmError('Could not parse an architecture. Did you mean to '
                            'set the arch_included flag to False?')
-    LOG.debug('arch chars: %s', arch_list)
+    log.debug('arch chars: %s', arch_list)
     return ''.join(arch_list)
 
 
@@ -297,12 +289,12 @@ def _check_leading(*char_lists):
     :return: None
     :rtype: None
     """
-    LOG.debug('_check_leading(%s)', char_lists)
+    log.debug('_check_leading(%s)', char_lists)
     for char_list in char_lists:
         while (len(char_list) != 0 and not char_list[0].isalnum() and
                 not char_list[0] == '~'):
             char_list.pop(0)
-        LOG.debug('updated list: %s', char_list)
+        log.debug('updated list: %s', char_list)
 
 
 def _trim_zeros(*char_lists):
@@ -316,11 +308,11 @@ def _trim_zeros(*char_lists):
     :return: None
     :rtype: None
     """
-    LOG.debug('_trim_zeros(%s)', char_lists)
+    log.debug('_trim_zeros(%s)', char_lists)
     for char_list in char_lists:
         while len(char_list) != 0 and char_list[0] == '0':
             char_list.pop(0)
-        LOG.debug('updated block: %s', char_list)
+        log.debug('updated block: %s', char_list)
 
 
 def _pop_digits(char_list):
@@ -334,33 +326,13 @@ def _pop_digits(char_list):
     :return: a list of string digits
     :rtype: list
     """
-    LOG.debug('_pop_digits(%s)', char_list)
+    log.debug('_pop_digits(%s)', char_list)
     digits = []
     while len(char_list) != 0 and char_list[0].isdigit():
         digits.append(char_list.pop(0))
-    LOG.debug('got digits: %s', digits)
-    LOG.debug('updated char list: %s', char_list)
+    log.debug('got digits: %s', digits)
+    log.debug('updated char list: %s', char_list)
     return digits
-
-
-def _pop_letters(char_list):
-    """Pop consecutive letters from the front of a list and return them
-
-    Pops any and all consecutive letters from the start of the provided
-    character list and returns them as a list of characters. Operates
-    on (and possibly alters) the passed list
-
-    :param list char_list: a list of characters
-    :return: a list of characters
-    :rtype: list
-    """
-    LOG.debug('_pop_letters(%s)', char_list)
-    letters = []
-    while len(char_list) != 0 and char_list[0].isalpha():
-        letters.append(char_list.pop(0))
-    LOG.debug('got letters: %s', letters)
-    LOG.debug('updated char list: %s', char_list)
-    return letters
 
 
 def _compare_blocks(block_a, block_b):
@@ -389,17 +361,17 @@ def _compare_blocks(block_a, block_b):
         -1 (if ``b`` is newer)
     :rtype: int
     """
-    LOG.debug('_compare_blocks(%s, %s)', block_a, block_b)
+    log.debug('_compare_blocks(%s, %s)', block_a, block_b)
     if block_a[0].isdigit():
         _trim_zeros(block_a, block_b)
         if len(block_a) != len(block_b):
-            LOG.debug('block lengths are not equal')
+            log.debug('block lengths are not equal')
             return A_NEWER if len(block_a) > len(block_b) else B_NEWER
     if block_a == block_b:
-        LOG.debug('blocks are equal')
+        log.debug('blocks are equal')
         return A_EQ_B
     else:
-        LOG.debug('blocks are not equal')
+        log.debug('blocks are not equal')
         return A_NEWER if block_a > block_b else B_NEWER
 
 
@@ -429,12 +401,12 @@ def _get_block_result(chars_a, chars_b):
         -1 (if ``b`` is newer)
     :rtype: int
     """
-    LOG.debug('_get_block_result(%s, %s)', chars_a, chars_b)
+    log.debug('_get_block_result(%s, %s)', chars_a, chars_b)
     first_is_digit = chars_a[0].isdigit()
-    pop_func = _pop_digits if first_is_digit else _pop_letters
+    pop_func = _pop_digits if first_is_digit else parse.pop_letters
     return_if_no_b = A_NEWER if first_is_digit else B_NEWER
     block_a, block_b = pop_func(chars_a), pop_func(chars_b)
     if len(block_b) == 0:
-        LOG.debug('blocks are equal')
+        log.debug('blocks are equal')
         return return_if_no_b
     return _compare_blocks(block_a, block_b)
